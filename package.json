@@ -20,6 +20,7 @@
     "@types/react-dom": "^19.1.9",
     "@types/swagger-ui-react": "^5.18.0",
     "@vitejs/plugin-react": "^5.0.3",
+    "baseline-browser-mapping": "^2.11.25",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -27,5 +28,14 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.44.0",
     "vite": "^7.1.7"
+  },
+  "allowScripts": {
+    "core-js-pure@3.45.1": true,
+    "esbuild@0.25.10": true,
+    "tree-sitter@0.21.1": true,
+    "tree-sitter@0.22.4": true,
+    "tree-sitter-json@0.24.8": true,
+    "@scarf/scarf@1.4.0": true,
+    "@tree-sitter-grammars/tree-sitter-yaml@0.7.1": true
   }
 }

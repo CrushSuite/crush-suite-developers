@@ -1,4 +1,16 @@
-# React + TypeScript + Vite
+# CrushSuite Developers
+
+Interactive API reference (Swagger UI) for the CrushSuite Service API, built with React + TypeScript + Vite.
+
+## SDK
+
+Rather than calling the API directly, most integrations should use the official [@crushsuite/sdk](https://www.npmjs.com/package/@crushsuite/sdk) package, which wraps the endpoints documented here in a typed JavaScript/TypeScript client.
+
+```bash
+npm install @crushsuite/sdk
+```
+
+---
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

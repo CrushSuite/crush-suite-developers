@@ -7,6 +7,14 @@ info:
     compliance checks, fee calculation, and event logging.
     Based on OpenAPI 3.0.4 spec.
     Reference: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.4.md
+
+
+    Prefer not to call these endpoints directly? Use the
+    [@crushsuite/sdk](https://www.npmjs.com/package/@crushsuite/sdk) package
+    for a typed JavaScript/TypeScript client.
+externalDocs:
+  description: "@crushsuite/sdk on npm"
+  url: https://www.npmjs.com/package/@crushsuite/sdk
 servers:
   - url: https://crush-suite-production.up.railway.app/service-api
     description: Production
