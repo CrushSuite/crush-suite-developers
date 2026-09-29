@@ -30,12 +30,13 @@
     "vite": "^7.1.7"
   },
   "allowScripts": {
-    "core-js-pure@3.45.1": true,
-    "esbuild@0.25.10": true,
     "tree-sitter@0.21.1": true,
     "tree-sitter@0.22.4": true,
     "tree-sitter-json@0.24.8": true,
     "@scarf/scarf@1.4.0": true,
-    "@tree-sitter-grammars/tree-sitter-yaml@0.7.1": true
+    "@tree-sitter-grammars/tree-sitter-yaml@0.7.1": true,
+    "core-js-pure@3.50.0": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }
