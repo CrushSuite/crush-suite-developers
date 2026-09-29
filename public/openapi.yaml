@@ -31,6 +31,7 @@ paths:
     get:
       tags: [Health]
       summary: Service API root
+      security: []
       description: Simple health endpoint for the Service API namespace.
       responses:
         "200":
@@ -65,13 +66,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrderCheckComplianceResponse"
         "400":
-          description: Invalid request payload
+          $ref: "#/components/responses/BadRequest"
         "401":
-          description: Not authorized
+          $ref: "#/components/responses/Unauthorized"
         "429":
-          description: Too Many Requests (rate limited)
+          $ref: "#/components/responses/TooManyRequests"
         "500":
-          description: Internal server error
+          $ref: "#/components/responses/InternalError"
 
   /compliance/alcohol-fee:
     post:
@@ -97,13 +98,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrderCheckComplianceFeeResponse"
         "400":
-          description: Invalid request payload
+          $ref: "#/components/responses/BadRequest"
         "401":
-          description: Not authorized
+          $ref: "#/components/responses/Unauthorized"
         "429":
-          description: Too Many Requests (rate limited)
+          $ref: "#/components/responses/TooManyRequests"
         "500":
-          description: Internal server error
+          $ref: "#/components/responses/InternalError"
 
   /compliance/compliance-event:
     post:
@@ -135,11 +136,9 @@ paths:
                 example:
                   message: event recorded
         "401":
-          description: Not authorized
+          $ref: "#/components/responses/Unauthorized"
         "429":
-          description: Too Many Requests (rate limited)
-        "500":
-          description: Internal server error
+          $ref: "#/components/responses/TooManyRequests"
 
 components:
   securitySchemes:
@@ -153,6 +152,49 @@ components:
       in: header
       name: x-api-key-sandbox
       description: Sandbox API key. When present, applies sandbox context.
+
+  responses:
+    BadRequest:
+      description: >
+        Invalid request payload. Returned when the body is empty or fails
+        validation. The body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: no body in request
+    Unauthorized:
+      description: Missing or invalid API key. The body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Not Authorized
+    TooManyRequests:
+      description: >
+        Rate limit exceeded. Limits are per API key over a 60-second window
+        (typically 60 requests per minute).
+      headers:
+        Retry-After:
+          description: Seconds until the current rate-limit window resets.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required: [message]
+            example:
+              message: Too Many Requests
+    InternalError:
+      description: Internal server error. The body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
 
   schemas:
     VariantQuantity:
@@ -213,13 +255,27 @@ components:
           minimum: 1900
       required: [day, month, year]
 
+    VariantQuantityWithPrice:
+      allOf:
+        - $ref: "#/components/schemas/VariantQuantity"
+        - type: object
+          properties:
+            unitPrice:
+              type: number
+              description: >
+                Optional unit price in major units (e.g. `19.99`). Only used by
+                merchants whose compliance partner is ShipCompliant, where it
+                overrides the stored product price (useful when a discount
+                applies). Ignored for other compliance partners.
+              example: 19.99
+
     OrderCheckComplianceRequest:
       type: object
       properties:
         variants:
           type: array
           items:
-            $ref: "#/components/schemas/VariantQuantity"
+            $ref: "#/components/schemas/VariantQuantityWithPrice"
         billToAddress:
           $ref: "#/components/schemas/OrderCheckComplianceAddress"
         shipToAddress:
@@ -234,6 +290,16 @@ components:
         bypassKYC:
           type: boolean
           description: For development/testing purposes
+        includesExternalComplianceProduct:
+          type: boolean
+          description: >
+            Set to `true` when the order contains products that are not managed
+            by CrushSuite but still need compliance checks (for example, wine
+            club subscriptions from another app). When none of the variants are
+            CrushSuite-managed products, only age verification (21+) and state
+            licensing are checked. Without this flag, such an order passes
+            without checks.
+          default: false
       required:
         - variants
         - billToAddress
@@ -242,31 +308,39 @@ components:
         - email
         - phoneNumber
 
-    ComplianceFee:
-      type: object
-      description: Map of variantId to fee quantity
-      additionalProperties:
-        type: integer
-      example:
-        "12345": 2
-        "67890": 1
-
     OrderCheckComplianceResponse:
       type: object
       properties:
         valid:
           type: boolean
         complianceFee:
-          $ref: "#/components/schemas/ComplianceFee"
-          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/OrderCheckComplianceFeeResponse"
+          description: >
+            Compliance fee for the order, in the same shape as the
+            `/compliance/alcohol-fee` response. `fee` is `null` when the order
+            is invalid or no fee applies.
         complianceKey:
           type: string
           nullable: true
+          description: Only set when `valid` is `true`.
         errors:
           type: array
+          nullable: true
+          description: >
+            Reasons the order failed compliance. May be `null` or an empty
+            array when the order is valid.
           items:
             type: string
       required: [valid, complianceFee, complianceKey, errors]
+      example:
+        valid: true
+        complianceFee:
+          fee:
+            "12345": 2
+          total: 3
+        complianceKey: abc123-compliance-key
+        errors: []
 
     OrderCheckComplianceFeeRequest:
       type: object
@@ -283,10 +357,18 @@ components:
       type: object
       properties:
         fee:
-          $ref: "#/components/schemas/ComplianceFee"
+          type: object
+          additionalProperties:
+            type: integer
           nullable: true
+          example:
+            "12345": 2
+          description: >
+            Map of compliance fee product variant ID to the quantity to add to
+            the cart, or `null` when no fee applies.
         total:
           type: number
+          description: Total compliance fee amount (fee quantity x fee product price). `0` when no fee applies.
       required: [fee, total]
 
     PrecomplianceEvent:
@@ -296,6 +378,7 @@ components:
           type: string
         eventType:
           type: string
+          enum: [INITIATED, SUBMITTED, APPROVED, FAILED]
           description: Event type identifier
         failedReason:
           type: string
